@@ -12,6 +12,8 @@ jobs:
   build:
     name: Build & Release Flutter App
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # Required to create/update releases
 
     steps:
       - name: Checkout Repository
@@ -49,5 +51,4 @@ jobs:
           draft: false
           prerelease: ${{ !startsWith(github.ref, 'refs/tags/') }}
           generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.AUTO_MAILER_AI }}
+          token: ${{ github.token }}
