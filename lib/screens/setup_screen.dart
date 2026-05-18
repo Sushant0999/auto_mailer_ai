@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 import '../services/setup_service.dart';
 import 'home_screen.dart';
 
@@ -20,6 +21,29 @@ class _SetupScreenState extends State<SetupScreen> {
   final _smtpPasswordController = TextEditingController();
   final _setupService = SetupService();
   bool _isLoading = false;
+  String? _resumePath;
+  String? _resumeText;
+
+  Future<void> _pickResume() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'txt'],
+      );
+      if (result != null && result.files.single.path != null) {
+        final path = result.files.single.path!;
+        setState(() => _isLoading = true);
+        final text = await _setupService.extractResumeText(path);
+        setState(() {
+          _resumePath = path;
+          _resumeText = text;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Pick resume error: $e');
+    }
+  }
 
   Future<void> _handleSetup() async {
     if (!_formKey.currentState!.validate()) return;
@@ -34,6 +58,8 @@ class _SetupScreenState extends State<SetupScreen> {
         grokKey: _grokKeyController.text.trim(),
         smtpEmail: _smtpEmailController.text.trim(),
         smtpPassword: _smtpPasswordController.text.trim(),
+        resumePath: _resumePath,
+        resumeText: _resumeText,
       );
       
       if (mounted) {
@@ -127,6 +153,40 @@ class _SetupScreenState extends State<SetupScreen> {
                   icon: Icons.lock_outline,
                   hint: '16-character code',
                   isPassword: true,
+                ),
+                const SizedBox(height: 24),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Resume (Optional)', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF6C63FF))),
+                    const SizedBox(height: 8),
+                    InkWell(
+                      onTap: _isLoading ? null : _pickResume,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1E1E1E),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.attach_file, color: Colors.grey),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                _resumePath != null
+                                    ? _resumePath!.split('/').last
+                                    : 'Upload Resume (PDF/TXT)',
+                                style: TextStyle(
+                                  color: _resumePath != null ? Colors.white : Colors.grey,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 48),
                 SizedBox(

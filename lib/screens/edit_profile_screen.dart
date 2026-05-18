@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 import '../services/setup_service.dart';
 
 class EditProfileScreen extends StatefulWidget {
@@ -13,6 +14,29 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   final SetupService _setupService = SetupService();
   bool _isLoading = false;
+  String? _resumePath;
+  String? _resumeText;
+
+  Future<void> _pickResume() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'txt'],
+      );
+      if (result != null && result.files.single.path != null) {
+        final path = result.files.single.path!;
+        setState(() => _isLoading = true);
+        final text = await _setupService.extractResumeText(path);
+        setState(() {
+          _resumePath = path;
+          _resumeText = text;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Pick resume error: $e');
+    }
+  }
 
   late TextEditingController _nameController;
   late TextEditingController _phoneController;
@@ -32,6 +56,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _grokKeyController = TextEditingController(text: widget.currentCreds['GROQ_API_KEY']);
     _smtpEmailController = TextEditingController(text: widget.currentCreds['SMTP_EMAIL']);
     _smtpPasswordController = TextEditingController(text: widget.currentCreds['SMTP_PASSWORD']);
+    _resumePath = widget.currentCreds['RESUME_PATH'];
+    _resumeText = widget.currentCreds['RESUME_TEXT'];
   }
 
   @override
@@ -59,6 +85,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         grokKey: _grokKeyController.text.trim(),
         smtpEmail: _smtpEmailController.text.trim(),
         smtpPassword: _smtpPasswordController.text.trim(),
+        resumePath: _resumePath,
+        resumeText: _resumeText,
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -104,6 +132,40 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     _buildTextField('SMTP Email', _smtpEmailController, Icons.email),
                     const SizedBox(height: 16),
                     _buildTextField('SMTP App Password', _smtpPasswordController, Icons.lock, isPassword: true),
+                    const SizedBox(height: 16),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Resume (Optional)', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF6C63FF))),
+                        const SizedBox(height: 8),
+                        InkWell(
+                          onTap: _isLoading ? null : _pickResume,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1E1E1E),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.attach_file, color: Colors.grey),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    _resumePath != null
+                                        ? _resumePath!.split('/').last
+                                        : 'Upload Resume (PDF/TXT)',
+                                    style: TextStyle(
+                                      color: _resumePath != null ? Colors.white : Colors.grey,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 48),
                     SizedBox(
                       width: double.infinity,

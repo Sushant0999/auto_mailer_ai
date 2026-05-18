@@ -15,6 +15,7 @@ class GroqService {
     final phone = await _db.getConfig('PHONE_NUMBER') ?? '';
     final linkedin = await _db.getConfig('LINKEDIN_URL') ?? '';
     final github = await _db.getConfig('GITHUB_URL') ?? '';
+    final resumeText = await _db.getConfig('RESUME_TEXT') ?? '';
     
     final contactInfo = [
       if (phone.isNotEmpty) 'Phone: $phone',
@@ -28,6 +29,10 @@ class GroqService {
 
     final bytes = await imageFile.readAsBytes();
     final base64Image = base64Encode(bytes);
+
+    final resumePrompt = resumeText.isNotEmpty
+        ? ' Tailor the cover letter to highlight matching skills and experiences from the applicant\'s resume text: """$resumeText""".'
+        : '';
 
     final response = await http.post(
       Uri.parse(_baseUrl),
@@ -44,7 +49,7 @@ class GroqService {
               {
                 'type': 'text',
                 'text':
-                    'You are an expert HR assistant. The applicant\'s name is $userName. Contact info to include: $contactInfo. Extract the HR email address and job location from this image. Then, generate a professional, high-converting cover letter for this position signed by $userName with the provided contact info. The subject should be catchy but professional. Return the response ONLY as a JSON object with the following keys: hr_email, location, generated_subject, generated_body.',
+                    'You are an expert HR assistant. The applicant\'s name is $userName. Contact info to include: $contactInfo. Extract the HR email address and job location from this image. Then, generate a professional, high-converting cover letter for this position signed by $userName with the provided contact info.$resumePrompt The subject should be catchy but professional. Return the response ONLY as a JSON object with the following keys: hr_email, location, generated_subject, generated_body.',
               },
               {
                 'type': 'image_url',
@@ -70,7 +75,8 @@ class GroqService {
       }
 
       try {
-        return JobDetails.fromJson(jsonDecode(cleanedContent));
+        final sanitized = _sanitizeJson(cleanedContent);
+        return JobDetails.fromJson(jsonDecode(sanitized));
       } catch (e) {
         print('JSON Parsing Error: $e\nContent: $cleanedContent');
         throw Exception('Failed to parse AI response as JSON.');
@@ -132,9 +138,27 @@ class GroqService {
         }
       }
       
-      return JobDetails.fromJson(jsonDecode(cleanedContent));
+      try {
+        final sanitized = _sanitizeJson(cleanedContent);
+        return JobDetails.fromJson(jsonDecode(sanitized));
+      } catch (e) {
+        print('JSON Parsing Error: $e\nContent: $cleanedContent');
+        throw Exception('Failed to revise content: $e');
+      }
     } else {
       throw Exception('Failed to revise content: ${response.statusCode}');
     }
+  }
+
+  String _sanitizeJson(String jsonStr) {
+    // Match JSON string literals, handling escaped double quotes
+    final regExp = RegExp(r'"[^"\\]*(?:\\.[^"\\]*)*"');
+    return jsonStr.replaceAllMapped(regExp, (match) {
+      String val = match.group(0)!;
+      // Replace raw control characters (newlines, carriage returns, tabs) with escaped versions
+      return val.replaceAll('\n', '\\n')
+                .replaceAll('\r', '\\r')
+                .replaceAll('\t', '\\t');
+    });
   }
 }

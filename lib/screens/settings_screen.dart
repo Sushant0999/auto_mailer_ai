@@ -87,6 +87,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 16),
                 _buildInfoCard(
                   context,
+                  title: 'Resume',
+                  subtitle: _creds['RESUME_PATH'] != null && _creds['RESUME_PATH']!.isNotEmpty
+                      ? _creds['RESUME_PATH']!.split('/').last
+                      : 'Not uploaded',
+                  icon: Icons.description,
+                ),
+                const SizedBox(height: 16),
+                _buildInfoCard(
+                  context,
                   title: 'Groq API Key',
                   subtitle: _maskKey(_creds['GROQ_API_KEY'] ?? 'Not found'),
                   icon: Icons.vpn_key,
