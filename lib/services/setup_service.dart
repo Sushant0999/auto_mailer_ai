@@ -33,6 +33,7 @@ class SetupService {
     required String smtpPassword,
     String? resumePath,
     String? resumeText,
+    String? customPrompt,
   }) async {
     await _db.setConfig('USER_NAME', userName);
     await _db.setConfig('PHONE_NUMBER', phone ?? '');
@@ -47,7 +48,9 @@ class SetupService {
     if (resumeText != null) {
       await _db.setConfig('RESUME_TEXT', resumeText);
     }
-    
+    // Always persist the custom prompt (empty string clears it → reverts to default)
+    await _db.setConfig('CUSTOM_PROMPT', customPrompt ?? '');
+
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_setupKey, true);
   }
@@ -63,6 +66,7 @@ class SetupService {
       'SMTP_PASSWORD': await _db.getConfig('SMTP_PASSWORD'),
       'RESUME_PATH': await _db.getConfig('RESUME_PATH'),
       'RESUME_TEXT': await _db.getConfig('RESUME_TEXT'),
+      'CUSTOM_PROMPT': await _db.getConfig('CUSTOM_PROMPT'),
     };
   }
 

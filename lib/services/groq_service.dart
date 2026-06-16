@@ -16,7 +16,8 @@ class GroqService {
     final linkedin = await _db.getConfig('LINKEDIN_URL') ?? '';
     final github = await _db.getConfig('GITHUB_URL') ?? '';
     final resumeText = await _db.getConfig('RESUME_TEXT') ?? '';
-    
+    final customPrompt = await _db.getConfig('CUSTOM_PROMPT') ?? '';
+
     final contactInfo = [
       if (phone.isNotEmpty) 'Phone: $phone',
       if (linkedin.isNotEmpty) 'LinkedIn: $linkedin',
@@ -34,6 +35,11 @@ class GroqService {
         ? ' Tailor the cover letter to highlight matching skills and experiences from the applicant\'s resume text: """$resumeText""".'
         : '';
 
+    // Build the email generation instruction: prefer user's custom prompt if provided.
+    final String emailInstruction = customPrompt.isNotEmpty
+        ? customPrompt
+        : 'generate a professional, high-converting cover letter for this position signed by $userName with the provided contact info.$resumePrompt The subject should be catchy but professional.';
+
     final response = await http.post(
       Uri.parse(_baseUrl),
       headers: {
@@ -49,7 +55,7 @@ class GroqService {
               {
                 'type': 'text',
                 'text':
-                    'You are an expert HR assistant. The applicant\'s name is $userName. Contact info to include: $contactInfo. Extract the HR email address and job location from this image. Then, generate a professional, high-converting cover letter for this position signed by $userName with the provided contact info.$resumePrompt The subject should be catchy but professional. Return the response ONLY as a JSON object with the following keys: hr_email, location, generated_subject, generated_body.',
+                    'You are an expert HR assistant. The applicant\'s name is $userName. Contact info to include: $contactInfo. Extract the HR email address and job location from this image. Then, $emailInstruction Return the response ONLY as a JSON object with the following keys: hr_email, location, generated_subject, generated_body.',
               },
               {
                 'type': 'image_url',
@@ -65,20 +71,11 @@ class GroqService {
       final data = jsonDecode(response.body);
       final content = data['choices'][0]['message']['content'];
 
-      // Attempt to clean the content if it contains markdown markers like ```json
-      String cleanedContent = content.toString().trim();
-      if (cleanedContent.startsWith('```')) {
-        final lines = cleanedContent.split('\n');
-        if (lines.length > 2) {
-          cleanedContent = lines.sublist(1, lines.length - 1).join('\n').trim();
-        }
-      }
-
       try {
-        final sanitized = _sanitizeJson(cleanedContent);
+        final sanitized = _sanitizeJson(_extractJsonBlock(content.toString()));
         return JobDetails.fromJson(jsonDecode(sanitized));
       } catch (e) {
-        print('JSON Parsing Error: $e\nContent: $cleanedContent');
+        print('JSON Parsing Error: $e\nContent: $content');
         throw Exception('Failed to parse AI response as JSON.');
       }
     } else {
@@ -129,25 +126,57 @@ class GroqService {
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       final content = data['choices'][0]['message']['content'];
-      
-      String cleanedContent = content.toString().trim();
-      if (cleanedContent.startsWith('```')) {
-        final lines = cleanedContent.split('\n');
-        if (lines.length > 2) {
-          cleanedContent = lines.sublist(1, lines.length - 1).join('\n').trim();
-        }
-      }
-      
+
       try {
-        final sanitized = _sanitizeJson(cleanedContent);
+        final cleaned = _extractJsonBlock(content.toString());
+        final sanitized = _sanitizeJson(cleaned);
         return JobDetails.fromJson(jsonDecode(sanitized));
+      } on FormatException catch (e) {
+        print('FormatException while revising: $e\nRaw content: $content');
+        throw Exception(
+          'The AI returned an unexpected format. Please try again or simplify your feedback.',
+        );
       } catch (e) {
-        print('JSON Parsing Error: $e\nContent: $cleanedContent');
-        throw Exception('Failed to revise content: $e');
+        print('Error while revising: $e\nRaw content: $content');
+        throw Exception('Failed to revise content. Please try again.');
       }
     } else {
-      throw Exception('Failed to revise content: ${response.statusCode}');
+      final body = response.body;
+      String errorMessage = 'Unknown error (${response.statusCode})';
+      try {
+        final errorData = jsonDecode(body);
+        errorMessage = errorData['error']?['message'] ?? errorMessage;
+      } catch (_) {}
+      throw Exception('Failed to revise content: $errorMessage');
     }
+  }
+
+  /// Extracts the first JSON object block from [raw], stripping markdown fences
+  /// (```json ... ``` or ``` ... ```) if present.
+  String _extractJsonBlock(String raw) {
+    String text = raw.trim();
+
+    // Strip markdown code fences if present
+    if (text.startsWith('```')) {
+      final lines = text.split('\n');
+      if (lines.length > 2) {
+        text = lines.sublist(1, lines.length - 1).join('\n').trim();
+        // Remove closing fence if still present
+        if (text.endsWith('```')) {
+          text = text.substring(0, text.length - 3).trim();
+        }
+      }
+    }
+
+    // As a last resort, try to find the first {...} block via regex
+    if (!text.startsWith('{')) {
+      final jsonMatch = RegExp(r'\{[\s\S]*\}').firstMatch(text);
+      if (jsonMatch != null) {
+        text = jsonMatch.group(0)!;
+      }
+    }
+
+    return text;
   }
 
   String _sanitizeJson(String jsonStr) {

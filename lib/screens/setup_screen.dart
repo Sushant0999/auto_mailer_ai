@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/setup_service.dart';
 import 'home_screen.dart';
 
@@ -42,6 +43,17 @@ class _SetupScreenState extends State<SetupScreen> {
       }
     } catch (e) {
       print('Pick resume error: $e');
+    }
+  }
+
+  Future<void> _launchUrl(String url) async {
+    final uri = Uri.parse(url);
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open link')),
+        );
+      }
     }
   }
 
@@ -139,6 +151,10 @@ class _SetupScreenState extends State<SetupScreen> {
                   icon: Icons.key,
                   hint: 'gsk_xxxxxxxx...',
                 ),
+                _buildLinkHint(
+                  label: 'Get your free Groq API Key →',
+                  url: 'https://console.groq.com/keys',
+                ),
                 const SizedBox(height: 24),
                 _buildTextField(
                   label: 'Gmail Address',
@@ -153,6 +169,10 @@ class _SetupScreenState extends State<SetupScreen> {
                   icon: Icons.lock_outline,
                   hint: '16-character code',
                   isPassword: true,
+                ),
+                _buildLinkHint(
+                  label: 'Create a Google App Password →',
+                  url: 'https://myaccount.google.com/apppasswords',
                 ),
                 const SizedBox(height: 24),
                 Column(
@@ -237,6 +257,31 @@ class _SetupScreenState extends State<SetupScreen> {
           validator: (value) => value == null || value.isEmpty ? 'This field is required' : null,
         ),
       ],
+    );
+  }
+
+  Widget _buildLinkHint({required String label, required String url}) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 6, left: 4),
+      child: GestureDetector(
+        onTap: () => _launchUrl(url),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.open_in_new, size: 13, color: Color(0xFF6C63FF)),
+            const SizedBox(width: 5),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Color(0xFF6C63FF),
+                fontSize: 12,
+                decoration: TextDecoration.underline,
+                decorationColor: Color(0xFF6C63FF),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

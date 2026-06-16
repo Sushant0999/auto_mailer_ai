@@ -96,6 +96,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 16),
                 _buildInfoCard(
                   context,
+                  title: 'Email Prompt',
+                  subtitle: (_creds['CUSTOM_PROMPT'] != null && _creds['CUSTOM_PROMPT']!.isNotEmpty)
+                      ? _creds['CUSTOM_PROMPT']!
+                      : 'Default (professional cover letter)',
+                  icon: Icons.edit_note,
+                ),
+                const SizedBox(height: 16),
+                _buildInfoCard(
+                  context,
                   title: 'Groq API Key',
                   subtitle: _maskKey(_creds['GROQ_API_KEY'] ?? 'Not found'),
                   icon: Icons.vpn_key,
