@@ -42,7 +42,7 @@ class AutoMailApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Auto Mail AI',
+      title: 'AutoMail AI',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
