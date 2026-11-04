@@ -47,7 +47,7 @@ class GroqService {
         'Authorization': 'Bearer $apiKey',
       },
       body: jsonEncode({
-        'model': 'meta-llama/llama-4-scout-17b-16e-instruct',
+        'model': 'llama-3.2-11b-vision-preview',
         'messages': [
           {
             'role': 'user',
@@ -75,11 +75,9 @@ class GroqService {
         final sanitized = _sanitizeJson(_extractJsonBlock(content.toString()));
         return JobDetails.fromJson(jsonDecode(sanitized));
       } catch (e) {
-        print('JSON Parsing Error: $e\nContent: $content');
-        throw Exception('Failed to parse AI response as JSON.');
+        throw Exception('Failed to parse AI response as JSON: $e');
       }
     } else {
-      print('Groq API Error (${response.statusCode}): ${response.body}');
       final errorData = jsonDecode(response.body);
       final errorMessage = errorData['error']?['message'] ?? 'Unknown error';
       throw Exception('Groq API Error: $errorMessage');
@@ -113,7 +111,7 @@ class GroqService {
         'Authorization': 'Bearer $apiKey',
       },
       body: jsonEncode({
-        'model': 'meta-llama/llama-4-scout-17b-16e-instruct',
+        'model': 'llama-3.3-70b-versatile',
         'messages': [
           {
             'role': 'user',
@@ -131,14 +129,12 @@ class GroqService {
         final cleaned = _extractJsonBlock(content.toString());
         final sanitized = _sanitizeJson(cleaned);
         return JobDetails.fromJson(jsonDecode(sanitized));
-      } on FormatException catch (e) {
-        print('FormatException while revising: $e\nRaw content: $content');
+      } on FormatException catch (_) {
         throw Exception(
           'The AI returned an unexpected format. Please try again or simplify your feedback.',
         );
       } catch (e) {
-        print('Error while revising: $e\nRaw content: $content');
-        throw Exception('Failed to revise content. Please try again.');
+        throw Exception('Failed to revise content: $e');
       }
     } else {
       final body = response.body;
@@ -148,6 +144,86 @@ class GroqService {
         errorMessage = errorData['error']?['message'] ?? errorMessage;
       } catch (_) {}
       throw Exception('Failed to revise content: $errorMessage');
+    }
+  }
+
+  /// AI Tailoring: analyzes current resume against a targeted job description or role,
+  /// and returns precise target string replacements (original text -> updated text)
+  /// so the PDF structure, fonts, line height, and layout remain completely preserved!
+  Future<Map<String, dynamic>> tailorResumeForJob({
+    required String resumeText,
+    required String jobContext,
+    String? focusArea,
+  }) async {
+    final apiKey = await _db.getConfig('GROQ_API_KEY');
+    if (apiKey == null || apiKey.isEmpty) {
+      throw Exception('Groq API Key not configured.');
+    }
+
+    final prompt = '''
+You are a senior executive recruiter and ATS resume optimization expert.
+The user wants to tailor their resume for a specific job, BUT WE MUST PRESERVE the EXACT structure, fonts, margins, and physical length of their original resume document.
+
+JOB DETAILS / REQUIREMENTS:
+"""$jobContext"""
+
+APPLICANT'S CURRENT RESUME TEXT:
+"""$resumeText"""
+
+Focus area / instructions: ${focusArea ?? 'Tailor the professional summary, key skills, and impact bullet points to align with the job requirements.'}
+
+CRITICAL RULES:
+1. Each replacement MUST have an "original_text" that is an EXACT substring from the resume text above. Do not truncate words or make up text.
+2. The "updated_text" must be approximately the same word count / character length as the "original_text" so that it fits naturally into the same visual line space on the PDF without overflowing.
+3. Suggest between 2 and 6 high-impact replacements (e.g. optimizing summary, highlighting matching technical keywords, rewriting bullet points with quantifiable impact).
+4. Return ONLY a valid JSON object with the following schema:
+{
+  "tailored_summary": "Short 1-2 sentence overview of how resume was adapted",
+  "recommended_keywords": ["keyword1", "keyword2", "keyword3"],
+  "replacements": [
+    {
+      "section": "Summary or Skills or Experience",
+      "original_text": "Exact sentence or phrase from resume",
+      "updated_text": "New tailored sentence or phrase",
+      "reason": "Why this change improves ATS match or relevance"
+    }
+  ]
+}
+''';
+
+    final response = await http.post(
+      Uri.parse(_baseUrl),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $apiKey',
+      },
+      body: jsonEncode({
+        'model': 'llama-3.3-70b-versatile',
+        'messages': [
+          {'role': 'user', 'content': prompt}
+        ],
+        'temperature': 0.3,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final content = data['choices'][0]['message']['content'];
+      try {
+        final cleaned = _extractJsonBlock(content.toString());
+        final sanitized = _sanitizeJson(cleaned);
+        return jsonDecode(sanitized) as Map<String, dynamic>;
+      } catch (e) {
+        throw Exception('Failed to parse AI tailoring suggestions: $e');
+      }
+    } else {
+      final body = response.body;
+      String errorMessage = 'Error (${response.statusCode})';
+      try {
+        final errorData = jsonDecode(body);
+        errorMessage = errorData['error']?['message'] ?? errorMessage;
+      } catch (_) {}
+      throw Exception('Resume tailoring failed: $errorMessage');
     }
   }
 

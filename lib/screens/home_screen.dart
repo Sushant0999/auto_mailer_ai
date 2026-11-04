@@ -1,12 +1,11 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:animations/animations.dart';
 import '../services/groq_service.dart';
-import '../models/job_details.dart';
 import 'job_detail_screen.dart';
 import 'history_screen.dart';
 import 'settings_screen.dart';
+import 'resume_update_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -40,7 +39,10 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}')),
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.redAccent,
+          ),
         );
       }
     } finally {
@@ -54,10 +56,36 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Auto Mail AI', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Row(
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFF6C63FF).withOpacity(0.5)),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.asset('assets/images/app_logo.jpg', fit: BoxFit.cover),
+              ),
+            ),
+            const SizedBox(width: 10),
+            const Text('Auto Mail AI', style: TextStyle(fontWeight: FontWeight.bold)),
+          ],
+        ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.picture_as_pdf_outlined),
+            tooltip: 'Tailor & Edit Resume',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const ResumeUpdateScreen()),
+            ),
+          ),
+          IconButton(
             icon: const Icon(Icons.history),
+            tooltip: 'Queue History',
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const HistoryScreen()),
@@ -65,6 +93,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.settings),
+            tooltip: 'Settings',
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const SettingsScreen()),
@@ -74,56 +103,193 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
-      body: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.auto_awesome, size: 80, color: Color(0xFF6C63FF)),
-            const SizedBox(height: 24),
-            Text(
-              'Automate Your Applications',
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+      body: SingleChildScrollView(
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const SizedBox(height: 10),
+              // Robot + Mail Logo
+              Container(
+                width: 110,
+                height: 110,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(28),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF6C63FF).withOpacity(0.3),
+                      blurRadius: 20,
+                      spreadRadius: 1,
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(28),
+                  child: Image.asset(
+                    'assets/images/app_logo.jpg',
+                    fit: BoxFit.cover,
                   ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Upload an image of a job post and let Groq generate the perfect email for you.',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: Colors.grey[400],
-                  ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 48),
-            if (_isLoading)
-              const Column(
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text('Groq is analyzing your image...', style: TextStyle(fontStyle: FontStyle.italic)),
-                ],
-              )
-            else
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _buildActionButton(
-                    icon: Icons.camera_alt,
-                    label: 'Camera',
-                    onTap: () => _pickImage(ImageSource.camera),
-                  ),
-                  const SizedBox(width: 24),
-                  _buildActionButton(
-                    icon: Icons.photo_library,
-                    label: 'Gallery',
-                    onTap: () => _pickImage(ImageSource.gallery),
-                  ),
-                ],
+                ),
               ),
-          ],
+              const SizedBox(height: 20),
+              Text(
+                'Automate Your Applications',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Upload a screenshot of any job post and let Groq AI extract details, craft the perfect cold email, and customize your resume.',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Colors.grey[400],
+                    ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 32),
+
+              if (_isLoading)
+                Container(
+                  padding: const EdgeInsets.all(28),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1E1E1E),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: const Color(0xFF6C63FF).withOpacity(0.3)),
+                  ),
+                  child: const Column(
+                    children: [
+                      CircularProgressIndicator(color: Color(0xFF6C63FF)),
+                      SizedBox(height: 16),
+                      Text('Groq AI Vision analyzing image...',
+                          style: TextStyle(fontStyle: FontStyle.italic, fontWeight: FontWeight.bold)),
+                      SizedBox(height: 4),
+                      Text('Extracting HR contact, location, and crafting pitch',
+                          style: TextStyle(fontSize: 12, color: Colors.grey)),
+                    ],
+                  ),
+                )
+              else ...[
+                // Main scan actions
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: _buildActionButton(
+                        icon: Icons.camera_alt,
+                        label: 'Take Photo',
+                        subtitle: 'Job Post or Screen',
+                        onTap: () => _pickImage(ImageSource.camera),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildActionButton(
+                        icon: Icons.photo_library,
+                        label: 'Gallery',
+                        subtitle: 'Saved Screenshot',
+                        onTap: () => _pickImage(ImageSource.gallery),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+
+                // Resume In-Place Tailoring Feature Card
+                InkWell(
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => const ResumeUpdateScreen()),
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          const Color(0xFF6C63FF).withOpacity(0.18),
+                          const Color(0xFF1E1E2C),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: const Color(0xFF6C63FF).withOpacity(0.35),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF6C63FF).withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: const Icon(
+                            Icons.tune,
+                            color: Color(0xFF6C63FF),
+                            size: 26,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Text(
+                                    'Update & Tailor Resume',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.greenAccent.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: const Text(
+                                      'NEW',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: Colors.greenAccent,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Update skills, summary & bullets while keeping 100% of fonts, structure & format intact.',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[400],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.arrow_forward_ios,
+                            size: 16, color: Colors.grey),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 24),
+            ],
+          ),
         ),
       ),
     );
@@ -132,23 +298,33 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildActionButton({
     required IconData icon,
     required String label,
+    required String subtitle,
     required VoidCallback onTap,
   }) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(20),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
         decoration: BoxDecoration(
           color: const Color(0xFF1E1E1E),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white.withOpacity(0.1)),
+          border: Border.all(color: Colors.white.withOpacity(0.08)),
         ),
         child: Column(
           children: [
-            Icon(icon, size: 32, color: const Color(0xFF6C63FF)),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF6C63FF).withOpacity(0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, size: 28, color: const Color(0xFF6C63FF)),
+            ),
             const SizedBox(height: 12),
-            Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+            Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+            const SizedBox(height: 4),
+            Text(subtitle, style: const TextStyle(fontSize: 11, color: Colors.grey)),
           ],
         ),
       ),

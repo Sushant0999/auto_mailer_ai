@@ -2,6 +2,7 @@ import 'dart:io';
 import 'database_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
+import 'package:path_provider/path_provider.dart';
 
 class SetupService {
   final DatabaseService _db = DatabaseService();
@@ -70,6 +71,33 @@ class SetupService {
     };
   }
 
+  /// Copies a picked resume file to the persistent app documents directory
+  /// to prevent Android / iOS cache cleaners from deleting it.
+  Future<String> persistResumeFile(String sourcePath) async {
+    try {
+      final sourceFile = File(sourcePath);
+      if (!await sourceFile.exists()) return sourcePath;
+
+      final appDir = await getApplicationDocumentsDirectory();
+      final resumesDir = Directory('${appDir.path}/resumes');
+      if (!await resumesDir.exists()) {
+        await resumesDir.create(recursive: true);
+      }
+
+      final fileName = sourcePath.split('/').last;
+      final targetPath = '${resumesDir.path}/$fileName';
+      
+      // If already in target path, nothing to copy
+      if (sourcePath == targetPath) return targetPath;
+
+      final targetFile = await sourceFile.copy(targetPath);
+      return targetFile.path;
+    } catch (_) {
+      // Fallback to original path if copy fails
+      return sourcePath;
+    }
+  }
+
   Future<String> extractResumeText(String filePath) async {
     try {
       final file = File(filePath);
@@ -86,8 +114,7 @@ class SetupService {
       } else {
         return await file.readAsString();
       }
-    } catch (e) {
-      print('Resume extraction error: $e');
+    } catch (_) {
       return '';
     }
   }

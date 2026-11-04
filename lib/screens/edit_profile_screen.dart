@@ -27,15 +27,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       if (result != null && result.files.single.path != null) {
         final path = result.files.single.path!;
         setState(() => _isLoading = true);
-        final text = await _setupService.extractResumeText(path);
+        final persistentPath = await _setupService.persistResumeFile(path);
+        final text = await _setupService.extractResumeText(persistentPath);
         setState(() {
-          _resumePath = path;
+          _resumePath = persistentPath;
           _resumeText = text;
           _isLoading = false;
         });
       }
-    } catch (e) {
-      print('Pick resume error: $e');
+    } catch (_) {
+      setState(() => _isLoading = false);
     }
   }
 

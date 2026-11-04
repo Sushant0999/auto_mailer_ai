@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/setup_service.dart';
 import 'edit_profile_screen.dart';
+import 'resume_update_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -87,11 +88,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 16),
                 _buildInfoCard(
                   context,
-                  title: 'Resume',
+                  title: 'Resume (Tap to Tailor)',
                   subtitle: _creds['RESUME_PATH'] != null && _creds['RESUME_PATH']!.isNotEmpty
                       ? _creds['RESUME_PATH']!.split('/').last
                       : 'Not uploaded',
                   icon: Icons.description,
+                  onTap: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const ResumeUpdateScreen()),
+                    );
+                    _loadCreds();
+                  },
                 ),
                 const SizedBox(height: 16),
                 _buildInfoCard(
@@ -156,36 +165,50 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return '${key.substring(0, 4)}****${key.substring(key.length - 4)}';
   }
 
-  Widget _buildInfoCard(BuildContext context, {required String title, required String subtitle, required IconData icon}) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E1E1E),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFF6C63FF).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
+  Widget _buildInfoCard(
+    BuildContext context, {
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    VoidCallback? onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1E1E1E),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white.withOpacity(0.05)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF6C63FF).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: const Color(0xFF6C63FF)),
             ),
-            child: Icon(icon, color: const Color(0xFF6C63FF)),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                const SizedBox(height: 4),
-                Text(subtitle, style: TextStyle(color: Colors.grey[400])),
-              ],
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 16)),
+                  const SizedBox(height: 4),
+                  Text(subtitle, style: TextStyle(color: Colors.grey[400])),
+                ],
+              ),
             ),
-          ),
-        ],
+            if (onTap != null)
+              const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
+          ],
+        ),
       ),
     );
   }

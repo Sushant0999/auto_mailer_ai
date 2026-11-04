@@ -1,9 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'screens/home_screen.dart';
-import 'screens/setup_screen.dart';
-import 'services/setup_service.dart';
+import 'screens/splash_screen.dart';
 
 void main() async {
   runZonedGuarded(() async {
@@ -33,20 +31,14 @@ void main() async {
       );
     };
 
-    final setupService = SetupService();
-    final bool isSetupComplete = await setupService.isSetupComplete();
-    
-    runApp(AutoMailApp(isSetupComplete: isSetupComplete));
+    runApp(const AutoMailApp());
   }, (error, stackTrace) {
-    print('Global Error Caught: $error');
-    // Here you would typically log to a service like Sentry or Firebase Crashlytics
+    debugPrint('Global Error Caught: $error');
   });
 }
 
 class AutoMailApp extends StatelessWidget {
-  final bool isSetupComplete;
-  
-  const AutoMailApp({super.key, required this.isSetupComplete});
+  const AutoMailApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -68,7 +60,7 @@ class AutoMailApp extends StatelessWidget {
           ),
         ),
       ),
-      home: isSetupComplete ? const HomeScreen() : const SetupScreen(),
+      home: const SplashScreen(),
     );
   }
 }

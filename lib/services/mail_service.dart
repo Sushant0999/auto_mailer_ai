@@ -5,6 +5,7 @@ import 'database_service.dart';
 
 class MailService {
   final DatabaseService _db = DatabaseService();
+  static bool _isProcessingQueue = false;
 
   Future<void> queueJobApplication({
     required String recipient,
@@ -13,9 +14,9 @@ class MailService {
     String? resumePath,
   }) async {
     await _db.insertEmail({
-      'recipient': recipient,
-      'subject': subject,
-      'body': body,
+      'recipient': recipient.trim(),
+      'subject': subject.trim(),
+      'body': body.trim(),
       'resume_path': resumePath,
       'status': 'pending',
     });
@@ -24,61 +25,68 @@ class MailService {
   }
 
   Future<void> processQueue() async {
-    final pendingEmails = await _db.getEmails(status: 'pending');
-    final failedEmails = await _db.getEmails(status: 'failed');
-    
-    // Combine and limit retries (e.g., only retry if retries < 3)
-    final queue = [...pendingEmails, ...failedEmails].where((e) => (e['retries'] ?? 0) < 3).toList();
+    if (_isProcessingQueue) return;
+    _isProcessingQueue = true;
 
-    if (queue.isEmpty) return;
+    try {
+      final pendingEmails = await _db.getEmails(status: 'pending');
+      final failedEmails = await _db.getEmails(status: 'failed');
+      
+      // Combine and limit retries (e.g., only retry if retries < 3)
+      final queue = [...pendingEmails, ...failedEmails].where((e) => (e['retries'] ?? 0) < 3).toList();
 
-    final smtpEmail = await _db.getConfig('SMTP_EMAIL');
-    final smtpPassword = await _db.getConfig('SMTP_PASSWORD');
+      if (queue.isEmpty) return;
 
-    if (smtpEmail == null || smtpPassword == null) {
-      print('SMTP credentials not configured');
-      return;
-    }
+      final smtpEmail = await _db.getConfig('SMTP_EMAIL');
+      final smtpPassword = await _db.getConfig('SMTP_PASSWORD');
+      final userName = await _db.getConfig('USER_NAME') ?? 'Job Applicant';
 
-    final smtpServer = gmail(smtpEmail, smtpPassword);
-
-    for (var emailData in queue) {
-      final int id = emailData['id'];
-      final int currentRetries = emailData['retries'] ?? 0;
-
-      await _db.updateEmailStatus(id, 'sending');
-
-      final message = Message()
-        ..from = Address(smtpEmail, 'Job Applicant')
-        ..recipients.add(emailData['recipient'])
-        ..subject = emailData['subject']
-        ..text = emailData['body'];
-
-      if (emailData['resume_path'] != null && emailData['resume_path'].isNotEmpty) {
-        message.attachments.add(FileAttachment(File(emailData['resume_path'])));
+      if (smtpEmail == null || smtpPassword == null) {
+        return;
       }
 
-      try {
-        await send(message, smtpServer);
-        await _db.updateEmailStatus(id, 'sent', retries: currentRetries + 1);
-        print('Email sent successfully: $id');
-      } on MailerException catch (e) {
-        print('Mailer Error for $id: $e');
-        await _db.updateEmailStatus(
-          id, 
-          'failed', 
-          errorMessage: e.toString(), 
-          retries: currentRetries + 1
-        );
-      } catch (e) {
-        print('Unexpected Error for $id: $e');
-        await _db.updateEmailStatus(
-          id, 
-          'failed', 
-          errorMessage: e.toString(), 
-          retries: currentRetries + 1
-        );
+      final smtpServer = gmail(smtpEmail, smtpPassword);
+
+      for (var emailData in queue) {
+        final int id = emailData['id'];
+        final int currentRetries = emailData['retries'] ?? 0;
+
+        await _db.updateEmailStatus(id, 'sending');
+
+        final message = Message()
+          ..from = Address(smtpEmail, userName)
+          ..recipients.add(emailData['recipient'])
+          ..subject = emailData['subject']
+          ..text = emailData['body'];
+
+        if (emailData['resume_path'] != null && (emailData['resume_path'] as String).isNotEmpty) {
+          final file = File(emailData['resume_path']);
+          if (await file.exists()) {
+            message.attachments.add(FileAttachment(file));
+          }
+        }
+
+        try {
+          await send(message, smtpServer);
+          await _db.updateEmailStatus(id, 'sent', retries: currentRetries + 1);
+        } on MailerException catch (e) {
+          await _db.updateEmailStatus(
+            id, 
+            'failed', 
+            errorMessage: e.toString(), 
+            retries: currentRetries + 1
+          );
+        } catch (e) {
+          await _db.updateEmailStatus(
+            id, 
+            'failed', 
+            errorMessage: e.toString(), 
+            retries: currentRetries + 1
+          );
+        }
       }
+    } finally {
+      _isProcessingQueue = false;
     }
   }
 

@@ -34,15 +34,16 @@ class _SetupScreenState extends State<SetupScreen> {
       if (result != null && result.files.single.path != null) {
         final path = result.files.single.path!;
         setState(() => _isLoading = true);
-        final text = await _setupService.extractResumeText(path);
+        final persistentPath = await _setupService.persistResumeFile(path);
+        final text = await _setupService.extractResumeText(persistentPath);
         setState(() {
-          _resumePath = path;
+          _resumePath = persistentPath;
           _resumeText = text;
           _isLoading = false;
         });
       }
-    } catch (e) {
-      print('Pick resume error: $e');
+    } catch (_) {
+      setState(() => _isLoading = false);
     }
   }
 
@@ -101,8 +102,25 @@ class _SetupScreenState extends State<SetupScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 100),
-                const Icon(Icons.auto_fix_high, size: 60, color: Color(0xFF6C63FF)),
+                const SizedBox(height: 70),
+                Container(
+                  width: 72,
+                  height: 72,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF6C63FF).withOpacity(0.35),
+                        blurRadius: 15,
+                        spreadRadius: 1,
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: Image.asset('assets/images/app_logo.jpg', fit: BoxFit.cover),
+                  ),
+                ),
                 const SizedBox(height: 24),
                 Text(
                   'Welcome to\nAuto Mail AI',
