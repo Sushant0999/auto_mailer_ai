@@ -35,6 +35,8 @@ class SetupService {
     String? resumePath,
     String? resumeText,
     String? customPrompt,
+    String? visionModel,
+    String? textModel,
   }) async {
     await _db.setConfig('USER_NAME', userName);
     await _db.setConfig('PHONE_NUMBER', phone ?? '');
@@ -43,6 +45,12 @@ class SetupService {
     await _db.setConfig('GROQ_API_KEY', grokKey);
     await _db.setConfig('SMTP_EMAIL', smtpEmail);
     await _db.setConfig('SMTP_PASSWORD', smtpPassword);
+    if (visionModel != null && visionModel.isNotEmpty) {
+      await _db.setConfig('GROQ_VISION_MODEL', visionModel);
+    }
+    if (textModel != null && textModel.isNotEmpty) {
+      await _db.setConfig('GROQ_TEXT_MODEL', textModel);
+    }
     if (resumePath != null) {
       await _db.setConfig('RESUME_PATH', resumePath);
     }
@@ -63,6 +71,8 @@ class SetupService {
       'LINKEDIN_URL': await _db.getConfig('LINKEDIN_URL'),
       'GITHUB_URL': await _db.getConfig('GITHUB_URL'),
       'GROQ_API_KEY': await _db.getConfig('GROQ_API_KEY'),
+      'GROQ_VISION_MODEL': await _db.getConfig('GROQ_VISION_MODEL') ?? 'qwen/qwen3.8-27b',
+      'GROQ_TEXT_MODEL': await _db.getConfig('GROQ_TEXT_MODEL') ?? 'llama-3.3-70b-versatile',
       'SMTP_EMAIL': await _db.getConfig('SMTP_EMAIL'),
       'SMTP_PASSWORD': await _db.getConfig('SMTP_PASSWORD'),
       'RESUME_PATH': await _db.getConfig('RESUME_PATH'),

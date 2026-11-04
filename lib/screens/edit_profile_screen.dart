@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/setup_service.dart';
+import 'model_selection_screen.dart';
 
 class EditProfileScreen extends StatefulWidget {
   final Map<String, String?> currentCreds;
@@ -148,6 +149,47 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     _buildLinkHint(
                       label: 'Get your free Groq API Key →',
                       url: 'https://console.groq.com/keys',
+                    ),
+                    const SizedBox(height: 12),
+                    InkWell(
+                      onTap: () async {
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const ModelSelectionScreen()),
+                        );
+                      },
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1B1B28),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: const Color(0xFF6C63FF).withOpacity(0.35)),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.psychology, color: Color(0xFF00E5FF), size: 22),
+                            SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'AI Models (Vision & Text)',
+                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                  ),
+                                  SizedBox(height: 2),
+                                  Text(
+                                    'Select any Groq model or custom ID',
+                                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
+                          ],
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 16),
                     _buildTextField('SMTP Email', _smtpEmailController, Icons.email),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/setup_service.dart';
 import 'edit_profile_screen.dart';
 import 'resume_update_screen.dart';
+import 'model_selection_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -117,6 +118,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   title: 'Groq API Key',
                   subtitle: _maskKey(_creds['GROQ_API_KEY'] ?? 'Not found'),
                   icon: Icons.vpn_key,
+                ),
+                const SizedBox(height: 16),
+                _buildInfoCard(
+                  context,
+                  title: 'AI Models (Vision & Text)',
+                  subtitle: 'Vision: ${_creds['GROQ_VISION_MODEL'] ?? 'qwen/qwen3.8-27b'}\nText: ${_creds['GROQ_TEXT_MODEL'] ?? 'llama-3.3-70b-versatile'}',
+                  icon: Icons.psychology,
+                  onTap: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const ModelSelectionScreen()),
+                    );
+                    _loadCreds();
+                  },
                 ),
                 const SizedBox(height: 16),
                 _buildInfoCard(

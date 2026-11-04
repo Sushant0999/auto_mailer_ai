@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/setup_service.dart';
+import '../services/groq_service.dart';
 import 'home_screen.dart';
 
 class SetupScreen extends StatefulWidget {
@@ -73,6 +74,8 @@ class _SetupScreenState extends State<SetupScreen> {
         smtpPassword: _smtpPasswordController.text.trim(),
         resumePath: _resumePath,
         resumeText: _resumeText,
+        visionModel: GroqService.defaultVisionModel,
+        textModel: GroqService.defaultTextModel,
       );
       
       if (mounted) {

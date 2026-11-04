@@ -6,6 +6,7 @@ import 'job_detail_screen.dart';
 import 'history_screen.dart';
 import 'settings_screen.dart';
 import 'resume_update_screen.dart';
+import 'model_selection_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -38,10 +39,30 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     } catch (e) {
       if (mounted) {
+        final errorText = e.toString().replaceFirst('Exception: ', '');
+        final isModelIssue = errorText.toLowerCase().contains('model') ||
+            errorText.toLowerCase().contains('decommissioned');
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: ${e.toString()}'),
+            content: Text(
+              'Error: $errorText',
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
             backgroundColor: Colors.redAccent,
+            duration: const Duration(seconds: 5),
+            action: isModelIssue
+                ? SnackBarAction(
+                    label: 'Choose Model',
+                    textColor: Colors.white,
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const ModelSelectionScreen()),
+                    ),
+                  )
+                : null,
           ),
         );
       }
@@ -71,10 +92,18 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             const SizedBox(width: 10),
-            const Text('Auto Mail AI', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text('AutoMail AI', style: TextStyle(fontWeight: FontWeight.bold)),
           ],
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.psychology_outlined),
+            tooltip: 'AI Models (Vision & Text)',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const ModelSelectionScreen()),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.picture_as_pdf_outlined),
             tooltip: 'Tailor & Edit Resume',
